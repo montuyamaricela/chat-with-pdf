@@ -1,0 +1,53 @@
+{
+  "name": "chat-with-pdf",
+  "version": "1.0.0",
+  "description": "A local literature review workspace for thesis and capstone research, with scholarly discovery, PDF retrieval, and source-backed evidence notes.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c green,blue \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:api": "MASTRA_TELEMETRY_DISABLED=1 mastra dev",
+    "dev:web": "vite --config web/vite.config.ts",
+    "build": "pnpm build:api && pnpm build:web",
+    "build:api": "MASTRA_TELEMETRY_DISABLED=1 mastra build",
+    "build:web": "vite build --config web/vite.config.ts",
+    "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json",
+    "verify:hnsw": "node scripts/verify-hnsw.mjs",
+    "start": "MASTRA_TELEMETRY_DISABLED=1 mastra start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@11.3.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@mastra/core": "latest",
+    "@mastra/evals": "latest",
+    "@mastra/loggers": "latest",
+    "@mastra/memory": "latest",
+    "@mastra/observability": "latest",
+    "@mastra/pg": "^1.27.1",
+    "@mastra/rag": "latest",
+    "lucide-react": "^1.48.0",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.23.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-markdown": "^10.1.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "mastra": "latest",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.1"
+  }
+}

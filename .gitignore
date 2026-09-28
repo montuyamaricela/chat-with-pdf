@@ -1,0 +1,12 @@
+output.txt
+node_modules
+.pnpm-store
+dist
+dist-web
+.mastra
+.env.development
+.env
+*.db
+*.db-*
+.netlify
+.vercel
