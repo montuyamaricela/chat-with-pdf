@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   ArrowRight, ArrowUpRight, BookOpen, Bookmark, Check, ChevronDown, CircleHelp,
-  ClipboardList, Compass, Database, ExternalLink, FilePlus2, FileSearch,
+  ClipboardList, Compass, ExternalLink, FilePlus2,
   FileText, FolderOpen, LoaderCircle, Menu, Plus, Search, Sparkles,
   Trash2, X,
 } from 'lucide-react';
@@ -44,7 +44,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: { 'Content-Type': 'application/json', ...options?.headers },
   });
-  const data = await response.json().catch(() => ({}));
+  if (!response.headers.get('content-type')?.includes('application/json')) {
+    throw new Error('The research server is unavailable. Start the project API and try again.');
+  }
+  const data = await response.json();
   if (!response.ok) throw new Error(data.error ?? `Request failed (${response.status})`);
   return data as T;
 }
@@ -179,7 +182,18 @@ export function App() {
     setScopeOpen(false);
   }
 
+  function editProject() {
+    setProjectTitle(project?.title ?? '');
+    setProjectQuestion(project?.researchQuestion ?? '');
+    setError('');
+    setModal(project ? 'edit-project' : 'project');
+  }
+
   function openPaperModal(paper?: DiscoveryPaper) {
+    if (!projectId) {
+      editProject();
+      return;
+    }
     setPaperDraft(paper ? {
       url: paper.pdfUrl ?? '', title: paper.title,
       authors: paper.authors.join(', '), publicationYear: String(paper.publicationYear ?? ''),
@@ -349,10 +363,10 @@ export function App() {
         <div className="sidebar-divider" />
         <div className="sidebar-section-title">Workspace</div>
         <nav className="main-nav" aria-label="Research workspace">
-          {navItems.map(item => <button key={item.id} className={view === item.id ? 'active' : ''} onClick={() => navigate(item.id)}><item.icon size={17} /><span>{item.label}</span>{item.id === 'evidence' && evidence.length > 0 && <em>{evidence.length}</em>}</button>)}
+          {navItems.map(item => <button key={item.id} aria-current={view === item.id ? 'page' : undefined} className={view === item.id ? 'active' : ''} onClick={() => navigate(item.id)}><item.icon size={17} /><span>{item.label}</span>{item.id === 'evidence' && evidence.length > 0 && <em>{evidence.length}</em>}</button>)}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-local"><span className="status-dot" /> Local workspace <span>v1.0</span></div>
+          <div className="sidebar-note"><BookOpen size={20} /><p>A little clarity.<br />A lot of possibility.</p><span>Your next insight starts here.</span></div><div className="sidebar-local"><span className="status-dot" /> Personal workspace <span>01</span></div>
         </div>
       </aside>
 
@@ -370,16 +384,61 @@ export function App() {
 
         <div className="page-scroll" key={view}>
           {view === 'overview' && <div className="page-content overview-page">
-            <div className="overview-heading top-heading"><div><span className="section-kicker">PROJECT OVERVIEW</span><h1>{project?.title ?? 'My research project'}</h1><p>Keep your reading, source passages, and research notes in one place.</p></div><button className="text-action" onClick={() => { setProjectTitle(project?.title ?? ''); setProjectQuestion(project?.researchQuestion ?? ''); setError(''); setModal('edit-project'); }}>Edit project <ArrowUpRight size={15} /></button></div>
-            <div className="overview-actions"><button className="primary-action" onClick={() => navigate('discover')}><Search size={17} /> Discover papers</button><button className="secondary-action" onClick={() => openPaperModal()}><FilePlus2 size={17} /> Add PDF link</button></div>
-            <div className="metric-grid"><div><span className="metric-icon"><FileText size={20} /></span><span><strong>{project?.paperCount ?? 0}</strong><small>Papers indexed</small></span></div><div><span className="metric-icon"><Bookmark size={20} /></span><span><strong>{project?.evidenceCount ?? 0}</strong><small>Evidence notes</small></span></div><div><span className="metric-icon"><Database size={20} /></span><span><strong>{status?.hnsw ? 'Ready' : 'Unavailable'}</strong><small>HNSW search index</small></span></div></div>
-            <div className="overview-section"><div className="section-heading"><div><span className="section-kicker">RESEARCH FOCUS</span><h2>Your guiding question</h2></div><button className="text-action" onClick={() => { setProjectTitle(project?.title ?? ''); setProjectQuestion(project?.researchQuestion ?? ''); setError(''); setModal('edit-project'); }}>Update question <ArrowUpRight size={15} /></button></div><div className="question-card"><span className="question-mark">?</span><p>{project?.researchQuestion || 'Add a research question to keep your reading focused.'}</p></div></div>
-            <div className="overview-section"><div className="section-heading"><div><span className="section-kicker">YOUR WORKFLOW</span><h2>Pick up where you left off</h2></div></div><div className="action-grid"><button onClick={() => navigate('discover')}><span><Search size={19} /></span><strong>Discover papers</strong><small>Search open-access scholarly records.</small><ArrowUpRight size={17} /></button><button onClick={() => navigate('library')}><span><FolderOpen size={19} /></span><strong>Review library</strong><small>Read and organize your indexed sources.</small><ArrowUpRight size={17} /></button><button onClick={() => navigate('evidence')}><span><ClipboardList size={19} /></span><strong>Build evidence</strong><small>Trace findings back to source pages.</small><ArrowUpRight size={17} /></button><button onClick={() => navigate('ask')}><span><FileSearch size={19} /></span><strong>Analyze sources</strong><small>Compare passages across your papers.</small><ArrowUpRight size={17} /></button></div></div>
+            <div className="overview-heading top-heading">
+              <div><span className="section-kicker">YOUR RESEARCH, CONNECTED</span><h1>{project?.title ?? 'Room for your next idea.'}</h1><p>From a stack of papers to a clearer perspective.</p></div>
+              <button className="secondary-action" onClick={() => openPaperModal()}><Plus size={16} /> {project ? 'Add a paper' : 'Create project'}</button>
+            </div>
+
+            <div className="overview-bento">
+              <section className="focus-card">
+                <div className="focus-orbit" aria-hidden="true"><i /><i /><i /><span><Compass size={34} strokeWidth={1} /></span></div>
+                <span className="section-kicker"><span className="status-dot" /> THE QUESTION THAT GUIDES YOU</span>
+                <h2>{project?.researchQuestion || 'Every discovery begins with a good question.'}</h2>
+                <p>{project?.researchQuestion ? 'Keep this in view. Let your sources lead you somewhere new.' : 'Set a research question to give your reading a direction.'}</p>
+                <button className="focus-action" onClick={editProject}>{project ? 'Refine your focus' : 'Start your research'} <ArrowUpRight size={17} /></button>
+                <span className="focus-caption" aria-hidden="true">FOLLOW YOUR CURIOSITY</span>
+              </section>
+              <section className="collection-card">
+                <div className="card-topline"><span className="section-kicker">YOUR COLLECTION</span><FolderOpen size={18} /></div>
+                <div className="collection-stats">
+                  <button onClick={() => navigate('library')}><strong>{String(project?.paperCount ?? 0).padStart(2, '0')}</strong><span>Papers indexed <ArrowUpRight size={13} /></span></button>
+                  <button onClick={() => navigate('evidence')}><strong>{String(project?.evidenceCount ?? 0).padStart(2, '0')}</strong><span>Evidence notes <ArrowUpRight size={13} /></span></button>
+                </div>
+                <div className="collection-footer"><span className={`index-dot ${status?.hnsw ? 'ready' : ''}`} />{status === null ? 'Connecting to your library' : status.hnsw ? 'Search index ready' : 'Search index unavailable'}</div>
+              </section>
+              <button className="insight-card" onClick={() => navigate('ask')}>
+                <span className="insight-icon"><Sparkles size={21} /></span><span><strong>Find the thread.</strong><small>Ask questions. Connect your sources.</small></span><ArrowUpRight size={20} />
+              </button>
+            </div>
+
+            <section className="overview-section">
+              <div className="section-heading"><div><span className="section-kicker">MAKE YOUR NEXT MOVE</span><h2>A little closer to your next insight.</h2></div><span className="section-aside">One source at a time.</span></div>
+              <div className="workflow-grid">
+                <button className="workflow-card discover-workflow" onClick={() => navigate('discover')}>
+                  <div className="workflow-art search-art" aria-hidden="true"><span className="art-search"><Search size={16} /><i /><span>↵</span></span><span className="art-result"><i /><i /></span><span className="art-result"><i /><i /></span><span className="art-orbit" /></div>
+                  <div className="workflow-copy"><span className="workflow-step">01 / EXPLORE</span><strong>Discover something new <ArrowUpRight size={17} /></strong><small>Find the papers that move your research forward.</small></div>
+                </button>
+                <button className="workflow-card library-workflow" onClick={() => navigate('library')}>
+                  <div className="workflow-art library-art" aria-hidden="true"><span className="art-paper back" /><span className="art-paper front"><FileText size={19} /><i /><i /><i /><em>YOUR NEXT PERSPECTIVE</em></span><span className="art-tag"><Check size={12} /> Source indexed</span></div>
+                  <div className="workflow-copy"><span className="workflow-step">02 / UNDERSTAND</span><strong>Make space for reading <ArrowUpRight size={17} /></strong><small>Your sources, organized and ready to explore.</small></div>
+                </button>
+                <button className="workflow-card evidence-workflow" onClick={() => navigate('evidence')}>
+                  <div className="workflow-art evidence-art" aria-hidden="true"><span className="art-note"><span>“</span><i /><i /><i /><em><Bookmark size={11} /> Saved to your research</em></span><span className="art-link"><ClipboardList size={17} /></span></div>
+                  <div className="workflow-copy"><span className="workflow-step">03 / CONNECT</span><strong>Turn reading into evidence <ArrowUpRight size={17} /></strong><small>Capture the findings that support your thinking.</small></div>
+                </button>
+              </div>
+            </section>
+
+            <section className="overview-section recent-section">
+              <div className="section-heading"><div><span className="section-kicker">BACK TO THE SOURCES</span><h2>Recently added</h2></div><button className="text-action" onClick={() => navigate('library')}>View library <ArrowRight size={15} /></button></div>
+              {papers.length ? <div className="recent-papers">{[...papers].sort((a, b) => b.indexedAt.localeCompare(a.indexedAt)).slice(0, 3).map(paper => <button key={paper.documentId} onClick={() => { setSelectedPaperId(paper.documentId); navigate('library'); }}><span className="paper-badge"><FileText size={18} /></span><span className="recent-copy"><strong>{paper.title}</strong><small>{shortAuthors(paper.authors)} · {paper.publicationYear ?? 'Year unknown'}</small></span><span className="recent-pages">{paper.totalPages} pages</span><ArrowUpRight size={16} /></button>)}</div> : <div className="recent-empty"><span className="paper-badge"><BookOpen size={20} /></span><div><strong>Your next great read belongs here.</strong><p>Add your first paper and start connecting the dots.</p></div><button className="text-action" onClick={() => navigate('discover')}>Find a paper <ArrowRight size={15} /></button></div>}
+            </section>
+            <footer className="overview-footer"><span>Made for curious minds.</span><span>Read. Question. Connect.</span></footer>
           </div>}
 
           {view === 'discover' && <div className="page-content">
             <div className="page-heading"><span className="section-kicker">01 / DISCOVER</span><h1>Find papers worth reading.</h1><p>Search open-access scholarly records. Review each source before bringing its PDF into your project.</p></div>
-            <form className="large-search" onSubmit={event => void discover(event)}><Search size={19} /><input aria-label="Search scholarly papers" placeholder="Try a topic, method, or research question..." value={discoveryQuery} onChange={event => setDiscoveryQuery(event.target.value)} /><button disabled={busy === 'discover' || discoveryQuery.trim().length < 3}>{busy === 'discover' ? <LoaderCircle className="spin" size={17} /> : 'Search papers'} <ArrowRight size={16} /></button></form>
+            <form className="large-search" onSubmit={event => void discover(event)}><Search size={19} /><input aria-label="Search scholarly papers" placeholder="Try a topic, method, or research question..." value={discoveryQuery} onChange={event => setDiscoveryQuery(event.target.value)} /><button disabled={busy === 'discover' || discoveryQuery.trim().length < 3}>{busy === 'discover' ? <><LoaderCircle className="spin" size={17} /> Searching...</> : 'Search papers'} <ArrowRight size={16} /></button></form>
             <div className="discovery-source"><Compass size={15} /> Results from OpenAlex · Open-access status does not guarantee a downloadable PDF or reuse rights.</div>
             {discovered.length === 0 ? <div className="empty-state"><span><Search size={27} /></span><h2>A good review starts with a good question.</h2><p>Search a topic to see papers, publication details, and available PDF sources.</p><div className="example-queries">{['retrieval augmented generation evaluation', 'student feedback systems', 'computer vision crop disease'].map(query => <button key={query} onClick={() => setDiscoveryQuery(query)}>{query} <ArrowUpRight size={13} /></button>)}</div></div> : <><div className="results-heading"><strong>{discovered.length} papers found</strong><span>Review titles and source links before indexing</span></div><div className="discovery-list">{discovered.map(item => <article className="discovery-card" key={item.openalexId}><div className="paper-badge"><FileText size={18} /></div><div className="discovery-body"><div className="paper-meta">{item.publicationYear ?? 'YEAR UNKNOWN'} <span>·</span> OPEN ACCESS {item.doi && <><span>·</span> DOI {item.doi}</>}</div><h3>{item.title}</h3><p>{shortAuthors(item.authors)}</p><div className="discovery-actions"><a href={item.sourceUrl} target="_blank" rel="noopener noreferrer">View record <ExternalLink size={14} /></a>{item.pdfUrl ? <button onClick={() => openPaperModal(item)}>Add to library <ArrowRight size={15} /></button> : <span className="no-pdf">No direct PDF link</span>}</div></div></article>)}</div></>}
           </div>}
