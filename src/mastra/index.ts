@@ -1,4 +1,5 @@
 import { Mastra } from '@mastra/core/mastra';
+import { VercelDeployer } from '@mastra/deployer-vercel';
 import { PinoLogger } from '@mastra/loggers';
 import { PostgresStore } from '@mastra/pg';
 import { indexPdfWorkflow } from './workflows/index-pdf';
@@ -8,6 +9,7 @@ import { vectorStore } from './lib/vector-store';
 import { appRoutes } from './routes/app-routes';
 
 export const mastra = new Mastra({
+  deployer: new VercelDeployer(),
   workflows: { indexPdfWorkflow },
   agents: { pdfChatAgent, researchAgent },
   vectors: { vectorStore },

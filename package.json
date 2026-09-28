@@ -10,6 +10,7 @@
     "build": "pnpm build:api && pnpm build:web",
     "build:api": "MASTRA_TELEMETRY_DISABLED=1 mastra build",
     "build:web": "vite build --config web/vite.config.ts",
+    "build:vercel": "pnpm build:api && pnpm build:web && node scripts/prepare-vercel.mjs",
     "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json",
     "verify:hnsw": "node scripts/verify-hnsw.mjs",
     "start": "MASTRA_TELEMETRY_DISABLED=1 mastra start"
@@ -24,6 +25,7 @@
   },
   "dependencies": {
     "@mastra/core": "latest",
+    "@mastra/deployer-vercel": "^1.2.30",
     "@mastra/evals": "latest",
     "@mastra/loggers": "latest",
     "@mastra/memory": "latest",
