@@ -1,9 +1,12 @@
-import { cpSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+  cpSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync,
+} from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const staticDirectory = resolve(root, '.vercel/output/static');
 const functionDirectory = resolve(root, '.vercel/output/functions/index.func');
+const routedFunctionDirectory = resolve(root, '.vercel/output/functions/mastra.func');
 
 function removeBuildOnlyFiles(directory) {
   for (const entry of readdirSync(directory)) {
@@ -33,6 +36,9 @@ const functionPackage = JSON.parse(readFileSync(functionPackagePath, 'utf8'));
 delete functionPackage.dependencies.typescript;
 writeFileSync(functionPackagePath, `${JSON.stringify(functionPackage, null, 2)}\n`);
 
+rmSync(routedFunctionDirectory, { recursive: true, force: true });
+renameSync(functionDirectory, routedFunctionDirectory);
+
 mkdirSync(staticDirectory, { recursive: true });
 cpSync(resolve(root, 'dist-web'), staticDirectory, { recursive: true });
 
@@ -42,7 +48,7 @@ writeFileSync(
     version: 3,
     routes: [
       { handle: 'filesystem' },
-      { src: '/app(?:/.*)?', dest: '/' },
+      { src: '/app(?:/.*)?', dest: '/mastra' },
       { src: '/(.*)', dest: '/index.html' },
     ],
   })}\n`,
